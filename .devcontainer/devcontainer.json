@@ -1,0 +1,57 @@
+{
+  "name": "Data Visualisation",
+  "build": {
+    "dockerfile": "Dockerfile.dev",
+    "context": ".."
+  },
+
+  // Forward the app port and expose it in the browser
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Data Visualisation App",
+      "onAutoForward": "openBrowserOnce"
+    }
+  },
+
+  // Mount the workspace into /workspace (default Codespaces behaviour)
+  "workspaceFolder": "/workspace",
+
+  // Environment variables available to every terminal and task
+  "remoteEnv": {
+    "DUCKDB_PATH": "/workspace/.data/app.duckdb",
+    "SECRET_KEY": "dev-secret-not-for-production"
+  },
+
+  // VS Code extensions
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "ms-python.black-formatter",
+        "humao.rest-client",
+        "mtxr.sqltools",
+        "42crunch.vscode-openapi"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true
+        },
+        "editor.rulers": [88],
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // Start the dev server automatically when the container opens
+  "postStartCommand": "mkdir -p /workspace/.data && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+
+  // Install deps if requirements.txt changed since image was built
+  "postCreateCommand": "pip install --quiet -r requirements.txt"
+}
