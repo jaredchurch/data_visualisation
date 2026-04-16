@@ -1,0 +1,28 @@
+# Dev container — Debian bookworm + Python 3 + all app dependencies
+# Matches the prod Dockerfile but with dev tooling added and no CMD
+# (the devcontainer.json postStartCommand runs uvicorn --reload instead)
+
+FROM debian:bookworm-slim
+
+# ── System packages ───────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    libpq-dev gcc \
+    curl ca-certificates git \
+    # Useful dev tools inside the container
+    vim nano less procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python virtual environment ────────────────────────────────────────────────
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+# ── Install Python dependencies up front so the image layer is cached ─────────
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip \
+ && pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ── Data directory (DuckDB file lives here; overridden by DUCKDB_PATH env var) -
+RUN mkdir -p /data && chmod 777 /data
+
+WORKDIR /workspace
