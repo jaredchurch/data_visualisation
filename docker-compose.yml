@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - duckdb_data:/data
+    environment:
+      - DUCKDB_PATH=/data/app.duckdb
+      - SECRET_KEY=change-me-in-production-use-a-long-random-string
+      # Optional: set a default admin on first boot
+      # - ADMIN_EMAIL=admin@example.com
+      # - ADMIN_PASSWORD=changeme
+    restart: unless-stopped
+
+volumes:
+  duckdb_data:
