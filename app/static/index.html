@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Visualisation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ═══════════════════════════════════════════════════════════ -->
+<div id="screen-auth" class="screen">
+  <div class="auth-card">
+    <div class="auth-logo">📊</div>
+    <h1>Data Visualisation</h1>
+    <p class="auth-sub">Connect your databases. Visualise your data.</p>
+
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="showAuthTab('login')">Sign in</button>
+      <button class="tab-btn"        onclick="showAuthTab('register')">Create account</button>
+    </div>
+
+    <form id="auth-form" onsubmit="submitAuth(event)">
+      <input class="field" type="email"    id="auth-email"    placeholder="Email address" required autocomplete="email"/>
+      <input class="field" type="password" id="auth-password" placeholder="Password (min 6 chars)" required autocomplete="current-password"/>
+      <button class="btn btn-primary btn-full" type="submit" id="auth-submit-btn">Sign in</button>
+    </form>
+    <p class="auth-msg" id="auth-msg"></p>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ══════════════════════════════════════════════════════════════ -->
+<div id="screen-app" class="screen hidden">
+
+  <nav class="topnav">
+    <span class="brand">📊 DataViz</span>
+    <div class="nav-right">
+      <span id="nav-user" class="nav-user"></span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- ── Objects list ──────────────────────────────────────────────── -->
+  <div id="view-objects" class="view">
+    <div class="page-header">
+      <h2>Objects</h2>
+      <button class="btn btn-primary btn-sm" onclick="showModal('modal-new-object')">+ New object</button>
+    </div>
+    <div id="objects-list" class="card-grid"></div>
+  </div>
+
+  <!-- ── Object detail ─────────────────────────────────────────────── -->
+  <div id="view-object" class="view hidden">
+    <div class="page-header">
+      <button class="btn btn-ghost btn-sm" onclick="showObjects()">← Objects</button>
+      <h2 id="obj-title">Object</h2>
+    </div>
+
+    <div class="section-tabs">
+      <button class="stab active" onclick="showObjTab('connections')">Connections</button>
+      <button class="stab"        onclick="showObjTab('queries')">Queries</button>
+      <button class="stab"        onclick="showObjTab('tables')">Ingested Tables</button>
+      <button class="stab"        onclick="showObjTab('charts')">Charts</button>
+    </div>
+
+    <!-- Connections -->
+    <div id="objtab-connections" class="objtab">
+      <div class="tab-header">
+        <h3>PostgreSQL Connections</h3>
+        <button class="btn btn-primary btn-sm" onclick="showModal('modal-new-connection')">+ Add connection</button>
+      </div>
+      <div id="connections-list"></div>
+    </div>
+
+    <!-- Queries -->
+    <div id="objtab-queries" class="objtab hidden">
+      <div class="tab-header">
+        <h3>Queries</h3>
+        <button class="btn btn-primary btn-sm" onclick="showModal('modal-new-query')">+ Add query</button>
+      </div>
+      <div id="queries-list"></div>
+    </div>
+
+    <!-- Tables -->
+    <div id="objtab-tables" class="objtab hidden">
+      <div class="tab-header">
+        <h3>Ingested Tables <span class="muted">(DuckDB)</span></h3>
+        <button class="btn btn-ghost btn-sm" onclick="loadTables()">↻ Refresh</button>
+      </div>
+      <div id="tables-list"></div>
+    </div>
+
+    <!-- Charts -->
+    <div id="objtab-charts" class="objtab hidden">
+      <div class="tab-header">
+        <h3>Charts</h3>
+        <button class="btn btn-primary btn-sm" onclick="showModal('modal-new-chart')">+ Add chart</button>
+      </div>
+      <div id="charts-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MODALS ═════════════════════════════════════════════════════════════════ -->
+
+<!-- New Object -->
+<div id="modal-new-object" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-new-object')">
+  <div class="modal">
+    <h3>New Object</h3>
+    <label>Name</label>
+    <input class="field" id="new-obj-name" placeholder="e.g. Sales Dashboard"/>
+    <label>Description (optional)</label>
+    <input class="field" id="new-obj-desc" placeholder="What is this for?"/>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="hideModal('modal-new-object')">Cancel</button>
+      <button class="btn btn-primary" onclick="createObject()">Create</button>
+    </div>
+    <p class="modal-msg" id="new-obj-msg"></p>
+  </div>
+</div>
+
+<!-- New Connection -->
+<div id="modal-new-connection" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-new-connection')">
+  <div class="modal">
+    <h3>Add PostgreSQL Connection</h3>
+    <label>Name</label>
+    <input class="field" id="conn-name" placeholder="Production DB"/>
+    <div class="field-row">
+      <div style="flex:3">
+        <label>Host</label>
+        <input class="field" id="conn-host" placeholder="db.example.com"/>
+      </div>
+      <div style="flex:1">
+        <label>Port</label>
+        <input class="field" id="conn-port" type="number" value="5432"/>
+      </div>
+    </div>
+    <label>Database</label>
+    <input class="field" id="conn-dbname" placeholder="mydb"/>
+    <label>Username</label>
+    <input class="field" id="conn-user" placeholder="postgres"/>
+    <label>Password</label>
+    <input class="field" type="password" id="conn-pass" placeholder="••••••••"/>
+    <div class="modal-btns">
+      <button class="btn btn-ghost"    onclick="hideModal('modal-new-connection')">Cancel</button>
+      <button class="btn btn-outline"  onclick="testConnection()">Test</button>
+      <button class="btn btn-primary"  onclick="createConnection()">Save</button>
+    </div>
+    <p class="modal-msg" id="conn-msg"></p>
+  </div>
+</div>
+
+<!-- New Query -->
+<div id="modal-new-query" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-new-query')">
+  <div class="modal modal-wide">
+    <h3>Add Query</h3>
+    <label>Query name</label>
+    <input class="field" id="q-name" placeholder="e.g. Monthly Sales"/>
+    <label>Connection</label>
+    <select class="field" id="q-conn"></select>
+    <label>Target table name <span class="muted">(stored in DuckDB)</span></label>
+    <input class="field" id="q-table" placeholder="e.g. monthly_sales"/>
+    <label>SQL <span class="muted">(SELECT only)</span></label>
+    <textarea class="field code-area" id="q-sql" rows="6" placeholder="SELECT date, product, revenue FROM sales WHERE ..."></textarea>
+    <div class="modal-btns">
+      <button class="btn btn-ghost"   onclick="hideModal('modal-new-query')">Cancel</button>
+      <button class="btn btn-primary" onclick="createQuery()">Save</button>
+    </div>
+    <p class="modal-msg" id="q-msg"></p>
+  </div>
+</div>
+
+<!-- New Chart -->
+<div id="modal-new-chart" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-new-chart')">
+  <div class="modal">
+    <h3>Add Chart</h3>
+    <label>Chart name</label>
+    <input class="field" id="chart-name" placeholder="e.g. Revenue by Category"/>
+    <label>Chart type</label>
+    <select class="field" id="chart-type">
+      <option value="bar">Bar chart</option>
+      <option value="horizontalBar">Horizontal bar</option>
+      <option value="line">Line chart</option>
+      <option value="pie">Pie chart</option>
+      <option value="doughnut">Doughnut</option>
+    </select>
+    <label>Measure <span class="muted">e.g. SUM(revenue), COUNT(*), AVG(amount)</span></label>
+    <input class="field" id="chart-measure" placeholder="SUM(revenue)"/>
+    <label>Dimension <span class="muted">e.g. category, product_name, month</span></label>
+    <input class="field" id="chart-dimension" placeholder="category"/>
+    <div class="modal-msg muted" id="chart-tables-hint"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost"   onclick="hideModal('modal-new-chart')">Cancel</button>
+      <button class="btn btn-primary" onclick="createChart()">Save</button>
+    </div>
+    <p class="modal-msg" id="chart-msg"></p>
+  </div>
+</div>
+
+<!-- Chart view modal -->
+<div id="modal-chart-view" class="modal-overlay hidden" onclick="closeModalOutside(event,'modal-chart-view')">
+  <div class="modal modal-wide">
+    <div class="modal-chart-header">
+      <h3 id="chart-view-title">Chart</h3>
+      <button class="btn btn-ghost btn-sm" onclick="hideModal('modal-chart-view')">✕</button>
+    </div>
+    <div class="chart-container">
+      <canvas id="chart-canvas"></canvas>
+    </div>
+    <details class="sql-details">
+      <summary>Generated SQL</summary>
+      <pre id="chart-sql"></pre>
+    </details>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
